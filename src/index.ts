@@ -534,7 +534,8 @@ interface LanguageServerWebsocketOptions extends LanguageServerBaseOptions {
 
 export function languageServer(options: LanguageServerWebsocketOptions) {
   const serverUri = options.serverUri;
-  options.serverUri = undefined;
+  // rome-ignore lint/performance/noDelete: <explanation>
+  delete options.serverUri;
   return languageServerWithTransport({
     ...options,
     transport: new WebSocketTransport(serverUri),
@@ -543,8 +544,6 @@ export function languageServer(options: LanguageServerWebsocketOptions) {
 
 export function languageServerWithTransport(options: LanguageServerOptions) {
   let plugin: LanguageServerPlugin | null = null;
-
-  console.log("Creating language server");
 
   return [
     client.of(
