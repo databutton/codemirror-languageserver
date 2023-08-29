@@ -1,31 +1,31 @@
 name: Release
 on:
-    push:
-        branches:
-            - master
+  push:
+    branches:
+      - master
 jobs:
-    release:
-        name: Release
-        runs-on: ubuntu-latest
+  release:
+    name: Release
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-            - uses: actions/setup-node@v3
-              with:
-                  node-version: 18
-                  cache: yarn
-                  cache-dependency-path: 'yarn.lock'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: yarn
+          cache-dependency-path: "yarn.lock"
 
-            - name: Install dependencies
-              run: yarn install --fronze-lockfile
+      - name: Install dependencies
+        run: yarn install --fronze-lockfile
 
-            # - name: Lint
-            #   run: yarn lint
+      - name: Lint
+        run: yarn lint
 
-            - name: Release
-              env:
-                  GITHUB_TOKEN: ${{ github.token }}
-                  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-              run: npx semantic-release
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release
