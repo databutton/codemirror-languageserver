@@ -6,6 +6,7 @@ import {
   ViewPlugin,
   Tooltip,
   hoverTooltip,
+  keymap,
 } from "@codemirror/view";
 import {
   RequestManager,
@@ -55,7 +56,7 @@ interface LSPRequestMap {
     LSP.CompletionParams,
     LSP.CompletionItem[] | LSP.CompletionList | null,
   ];
-  "textDocument/formatting": [];
+  "textDocument/formatting": [LSP.DocumentFormattingParams, LSP.TextEdit[]];
 }
 
 // Client to server
@@ -63,6 +64,7 @@ interface LSPNotifyMap {
   initialized: LSP.InitializedParams;
   "textDocument/didChange": LSP.DidChangeTextDocumentParams;
   "textDocument/didOpen": LSP.DidOpenTextDocumentParams;
+  "textDocument/formatting": LSP.DocumentFormattingParams;
 }
 
 // Server to client
@@ -212,6 +214,10 @@ export class LanguageServerClient {
     return this.notify("textDocument/didChange", params);
   }
 
+  textDocumentFormatting(params: LSP.DocumentFormattingParams) {
+    return this.request("textDocument/formatting", params, timeout);
+  }
+
   async textDocumentHover(params: LSP.HoverParams) {
     return await this.request("textDocument/hover", params, timeout);
   }
@@ -315,6 +321,27 @@ class LanguageServerPlugin implements PluginValue {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  async format() {
+    if (!this.client.ready) return;
+    const result = await this.client.textDocumentFormatting({
+      textDocument: { uri: this.documentUri },
+      options: {
+        tabSize: this.view.state.tabSize,
+        insertSpaces: true,
+      },
+    });
+    if (!result) return;
+    const changes = result.map(({ newText, range }) => ({
+      from: posToOffset(this.view.state.doc, range.start),
+      to: posToOffset(this.view.state.doc, range.end),
+      insert: newText,
+    }));
+    this.view.dispatch({
+      changes,
+      selection: this.view.state.selection,
+    });
   }
 
   requestDiagnostics(view: EditorView) {
@@ -536,6 +563,17 @@ export function languageServerWithTransport(options: LanguageServerOptions) {
         plugin?.requestHoverTooltip(view, offsetToPos(view.state.doc, pos)) ??
         null,
     ),
+    keymap.of([
+      {
+        key: "Mod-F",
+        mac: "Cmd-F",
+        run: (_view) => {
+          console.log("Formatting");
+          plugin.format();
+          return true;
+        },
+      },
+    ]),
     autocompletion({
       override: [
         async (context) => {
