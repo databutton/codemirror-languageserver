@@ -7,18 +7,13 @@
         "prepare": "rollup -c rollup.config.js",
         "watch": "nodemon --watch src/index.ts --exec \"yarn prepare\""
     },
-    "author": {
-        "name": "Mahmud Ridwan",
-        "email": "m@hjr265.me",
-        "url": "https://hjr265.me"
-    },
-    "homepage": "https://github.com/FurqanSoftware/codemirror-languageserver",
+    "homepage": "https://github.com/databutton/codemirror-languageserver",
     "bugs": {
-        "url": "https://github.com/FurqanSoftware/codemirror-languageserver/issues"
+        "url": "https://github.com/databutton/codemirror-languageserver/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/FurqanSoftware/codemirror-languageserver.git"
+        "url": "https://github.com/databutton/codemirror-languageserver.git"
     },
     "license": "BSD-3-Clause",
     "devDependencies": {
