@@ -496,6 +496,8 @@ export function languageServer(options: LanguageServerWebsocketOptions){
 export function languageServerWithTransport(options: LanguageServerOptions) {
     let plugin: LanguageServerPlugin | null = null;
 
+    console.log('Creating language server')
+
     return [
         client.of(options.client || new LanguageServerClient({...options, autoClose: true})),
         documentUri.of(options.documentUri),
