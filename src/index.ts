@@ -564,8 +564,8 @@ export function languageServerWithTransport(options: LanguageServerOptions) {
     ),
     keymap.of([
       {
-        key: "Mod-F",
-        mac: "Cmd-F",
+        key: "Shift-Enter",
+        // mac: "Cmd-F",
         run: (_view) => {
           console.log("Formatting");
           plugin.format();
