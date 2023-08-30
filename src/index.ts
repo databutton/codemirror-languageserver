@@ -324,23 +324,46 @@ class LanguageServerPlugin implements PluginValue {
   }
 
   async format() {
-    if (!this.client.ready) return;
+    if (!this.client.ready) {
+      return;
+    }
+
     const result = await this.client.textDocumentFormatting({
       textDocument: { uri: this.documentUri },
       options: {
+        // TODO: Make this configurable
         tabSize: this.view.state.tabSize,
         insertSpaces: true,
       },
     });
-    if (!result) return;
-    const changes = result.map(({ newText, range }) => ({
-      from: posToOffset(this.view.state.doc, range.start),
-      to: posToOffset(this.view.state.doc, range.end),
-      insert: newText,
-    }));
+
+    if (result.length === 0) {
+      return;
+    }
+
+    const changes = [];
+    result.forEach(({ newText, range }) => {
+      const from = posToOffset(this.view.state.doc, range.start);
+      const to = posToOffset(this.view.state.doc, range.end);
+
+      if (from !== undefined && to !== undefined) {
+        changes.push({
+          from,
+          to,
+          insert: newText,
+        });
+      }
+    });
+
+    const newTextLength = result[0].newText.length;
+    const newSelectionAnchor =
+      this.view.state.selection.main.head > newTextLength
+        ? newTextLength
+        : this.view.state.selection.main.head;
+
     this.view.dispatch({
       changes,
-      selection: this.view.state.selection,
+      selection: { anchor: newSelectionAnchor },
     });
   }
 
@@ -564,11 +587,9 @@ export function languageServerWithTransport(options: LanguageServerOptions) {
     ),
     keymap.of([
       {
-        key: "Shift-Enter",
-        // mac: "Cmd-F",
+        key: "Mod-s",
         run: (_view) => {
-          console.log("Formatting");
-          plugin.format();
+          plugin?.format();
           return true;
         },
       },
