@@ -1,5 +1,5 @@
 import { autocompletion } from "@codemirror/autocomplete";
-import { setDiagnostics } from "@codemirror/lint";
+import { linter, setDiagnostics } from "@codemirror/lint";
 import { Facet } from "@codemirror/state";
 import {
   EditorView,
@@ -55,6 +55,10 @@ interface LSPRequestMap {
   "textDocument/completion": [
     LSP.CompletionParams,
     LSP.CompletionItem[] | LSP.CompletionList | null,
+  ];
+  "textDocument/didChange": [
+    LSP.DidChangeTextDocumentParams,
+    LSP.PublishDiagnosticsParams,
   ];
   "textDocument/formatting": [LSP.DocumentFormattingParams, LSP.TextEdit[]];
 }
@@ -214,8 +218,12 @@ export class LanguageServerClient {
     return this.notify("textDocument/didChange", params);
   }
 
-  textDocumentFormatting(params: LSP.DocumentFormattingParams) {
+  async textDocumentFormatting(params: LSP.DocumentFormattingParams) {
     return this.request("textDocument/formatting", params, timeout);
+  }
+
+  async textDocumentLinting(params: LSP.DidChangeTextDocumentParams) {
+    return this.request("textDocument/didChange", params, timeout);
   }
 
   async textDocumentHover(params: LSP.HoverParams) {
@@ -367,8 +375,54 @@ class LanguageServerPlugin implements PluginValue {
     });
   }
 
-  requestDiagnostics(view: EditorView) {
-    this.sendChange({ documentText: view.state.doc.toString() });
+  async requestDiagnostics(view: EditorView) {
+    if (!this.client.ready) {
+      return;
+    }
+
+    const result = await this.client.textDocumentLinting({
+      textDocument: {
+        uri: this.documentUri,
+        version: this.documentVersion++,
+      },
+      contentChanges: [{ text: view.state.doc.toString() }],
+    });
+
+    console.debug(`Diagnostics for ${this.documentUri}:`, result);
+    if (result.uri !== this.documentUri) return;
+
+    const diagnostics = result.diagnostics
+      .map(({ range, message, severity }) => ({
+        from: posToOffset(this.view.state.doc, range.start),
+        to: posToOffset(this.view.state.doc, range.end),
+        severity: (
+          {
+            [DiagnosticSeverity.Error]: "error",
+            [DiagnosticSeverity.Warning]: "warning",
+            [DiagnosticSeverity.Information]: "info",
+            [DiagnosticSeverity.Hint]: "info",
+          } as const
+        )[severity],
+        message,
+      }))
+      .filter(
+        ({ from, to }) =>
+          from !== null &&
+          to !== null &&
+          from !== undefined &&
+          to !== undefined,
+      )
+      .sort((a, b) => {
+        switch (true) {
+          case a.from < b.from:
+            return -1;
+          case a.from > b.from:
+            return 1;
+        }
+        return 0;
+      });
+
+    return diagnostics;
   }
 
   async requestHoverTooltip(
@@ -575,6 +629,10 @@ export function languageServerWithTransport(options: LanguageServerOptions) {
     ),
     documentUri.of(options.documentUri),
     languageId.of(options.languageId),
+    linter(async (view) => {
+      const diagnostics = await plugin?.requestDiagnostics(view);
+      return diagnostics;
+    }),
     ViewPlugin.define(
       (view) =>
         // rome-ignore lint/suspicious/noAssignInExpressions: <explanation>
