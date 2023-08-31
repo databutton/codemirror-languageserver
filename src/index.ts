@@ -376,6 +376,7 @@ class LanguageServerPlugin implements PluginValue {
   }
 
   async requestDiagnostics(view: EditorView) {
+    console.debug(`Requesting diagnostics for ${this.documentUri}`);
     if (!this.client.ready) {
       return;
     }
@@ -648,6 +649,13 @@ export function languageServerWithTransport(options: LanguageServerOptions) {
         key: "Mod-s",
         run: (_view) => {
           plugin?.format();
+          return true;
+        },
+      },
+      {
+        key: "Mod-l",
+        run: (view) => {
+          plugin?.requestDiagnostics(view);
           return true;
         },
       },
