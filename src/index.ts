@@ -18,7 +18,6 @@ import {
   CompletionItemKind,
   CompletionTriggerKind,
 } from "vscode-languageserver-protocol";
-
 import type {
   Completion,
   CompletionContext,
@@ -45,8 +44,6 @@ const client = Facet.define<LanguageServerClient, LanguageServerClient>({
 });
 const documentUri = Facet.define<string, string>({ combine: useLast });
 const languageId = Facet.define<string, string>({ combine: useLast });
-
-// https://microsoft.github.io/language-server-protocol/specifications/specification-current/
 
 // Client to server then server to client
 interface LSPRequestMap {
@@ -438,7 +435,11 @@ class LanguageServerPlugin implements PluginValue {
       textDocument: { uri: this.documentUri },
       position: { line, character },
     });
-    if (!result) return null;
+
+    if (!result.contents) {
+      return null;
+    }
+
     const { contents, range } = result;
     let pos = posToOffset(view.state.doc, { line, character });
     let end: number;
